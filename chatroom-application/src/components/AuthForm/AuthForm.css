@@ -1,0 +1,23 @@
+.divider {
+    text-align: center;
+    margin: 1rem 0;
+    color: #666;
+  }
+  
+  .google-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.5rem;
+    width: 100%;
+    background: #4285F4;
+    color: white;
+    border: none;
+    border-radius: 0.25rem;
+    cursor: pointer;
+  }
+  .google-btn:hover {
+    filter: brightness(1.1);
+  }
+  

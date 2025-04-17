@@ -1,0 +1,34 @@
+// firestore.rules
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Chatrooms collection
+    match /chatrooms/{roomId} {
+      // Allow reading the list or a specific room ONLY if:
+      // 1) the user is logged in, and
+      // 2) their UID is in the room’s members array.
+      allow list, get: if request.auth != null
+        && request.auth.uid in resource.data.members;
+      
+      // Allow creating a new room (no resource yet, so use request.resource)
+      allow create: if request.auth != null
+        && // the new room must have:
+          request.resource.data.members is list
+        && request.resource.data.members.size() > 0
+        && request.auth.uid in request.resource.data.members
+        && request.resource.data.name is string
+        && request.resource.data.name.size() > 0
+        && request.resource.data.createdAt == request.time;
+    }
+
+    // Messages subcollection under a room
+    match /chatrooms/{roomId}/messages/{messageId} {
+      // Allow reading and writing messages only for room members
+      allow read, write: if request.auth != null
+        && request.auth.uid in
+           get(/databases/$(database)/documents/chatrooms/$(roomId)).data.members;
+    }
+
+  }
+}

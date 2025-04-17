@@ -1,0 +1,12 @@
+{
+  "indexes": [
+    {
+      "collectionGroup": "chatrooms",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "members",   "arrayConfig": "CONTAINS" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ]
+    }
+  ]
+}
