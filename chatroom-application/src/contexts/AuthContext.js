@@ -13,63 +13,72 @@ import {
 import { doc, setDoc, serverTimestamp } from 'firebase/firestore'
 import { auth, firestore } from '../firebase'
 
-// 2. create AuthContext
 const AuthContext = createContext()
 
+// 2. create AuthProvider component
 export function AuthProvider({ children }) {
   const [currentUser, setCurrentUser] = useState(null)
   const [loading, setLoading] = useState(true)
 
-  // 3. sign up with email/password and record in 'users' collection
-  async function signup(email, password) {
-    const cred = await createUserWithEmailAndPassword(auth, email, password)
-    await setDoc(doc(firestore, 'users', cred.user.uid), {
-      email: cred.user.email,
-      createdAt: serverTimestamp(),
-    })
-    return cred
+  // email/password signup
+  function signup(email, password) {
+    return createUserWithEmailAndPassword(auth, email, password)
   }
 
-  // 5. sign in with email/password
+  // email/password login
   function login(email, password) {
     return signInWithEmailAndPassword(auth, email, password)
   }
 
-  // 6. sign in with Google OAuth
+  // google OAuth
   function signInWithGoogle() {
     const provider = new GoogleAuthProvider()
     return signInWithPopup(auth, provider)
   }
 
-  // 7. sign out
+  // sign out
   function logout() {
     return signOut(auth)
   }
 
-  // 8. listen for authentication state changes
+  // listen for auth state changes & upsert user record
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, user => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
       setCurrentUser(user)
+      if (user) {
+        try {
+          await setDoc(
+            doc(firestore, 'users', user.uid),
+            {
+              email: user.email,
+              createdAt: serverTimestamp()
+            },
+            { merge: true }
+          )
+        } catch (err) {
+          console.error('Error upserting user:', err)
+        }
+      }
       setLoading(false)
     })
     return unsubscribe
   }, [])
 
-  // 9. only render children once we know auth status
+  const value = {
+    currentUser,
+    signup,
+    login,
+    signInWithGoogle,
+    logout
+  }
+
   return (
-    <AuthContext.Provider value={{
-      currentUser,
-      signup,
-      login,
-      signInWithGoogle,
-      logout
-    }}>
+    <AuthContext.Provider value={value}>
       {!loading && children}
     </AuthContext.Provider>
   )
 }
 
-// 10. custom hook to access the auth context
 export function useAuth() {
   return useContext(AuthContext)
 }
