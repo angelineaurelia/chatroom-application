@@ -5,11 +5,13 @@ import React, { useState } from 'react'
 import { useAuth } from '../../contexts/AuthContext'
 import { useNavigate } from 'react-router-dom'
 import './AuthForm.css'
+import googleLogo from '../../assets/google-logo.svg'
 
 // 2. create AuthForm component
 export default function AuthForm() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
   const [isSignUp, setIsSignUp] = useState(false)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
@@ -17,17 +19,13 @@ export default function AuthForm() {
   const { signup, login, signInWithGoogle } = useAuth()
   const navigate = useNavigate()
 
-  // email/password sign up / sign in
+  // 3. handle form submission
   async function handleSubmit(e) {
     e.preventDefault()
-    setError('')
-    setLoading(true)
+    setError(''); setLoading(true)
     try {
-      if (isSignUp) {
-        await signup(email, password)
-      } else {
-        await login(email, password)
-      }
+      if (isSignUp) await signup(email, password)
+      else            await login( email, password)
       navigate('/chatrooms')
     } catch (err) {
       setError(err.message)
@@ -35,73 +33,109 @@ export default function AuthForm() {
     setLoading(false)
   }
 
-  // google oauth sign in
+  // 4. handle Google sign-in
   async function handleGoogleSignIn() {
-    setError('')
-    setLoading(true)
+    setError(''); setLoading(true)
     try {
       await signInWithGoogle()
       navigate('/chatrooms')
-    } catch (err) {
-      setError('Google sign‑in failed: ' + err.message)
+    } catch {
+      setError('Google sign‑in failed')
     }
     setLoading(false)
   }
-  
-  // render the form
+
+  // 5. render the form
   return (
-    <div className="auth-form">
-      <h2>{isSignUp ? 'Sign Up' : 'Sign In'}</h2>
-      {error && <div className="error">{error}</div>}
+    <div className="auth-container">
+      <div className="auth-card fade-in">
+        <h1 className="auth-title">
+          {isSignUp ? 'Create Account' : 'Welcome Back'}
+        </h1>
+        <p className="auth-subtitle">
+          {isSignUp
+            ? 'Join us—just a few details to get started.'
+            : "Sign in to continue."}
+        </p>
 
-      <form onSubmit={handleSubmit}>
-        <input
-          type="email"
-          placeholder="Email"
-          value={email}
-          onChange={e => setEmail(e.target.value)}
-          required
-        />
-        <input
-          type="password"
-          placeholder="Password (6+ chars)"
-          value={password}
-          onChange={e => setPassword(e.target.value)}
-          required
-        />
-        <button type="submit" disabled={loading}>
-          {loading
-            ? 'Processing…'
-            : isSignUp
-            ? 'Sign Up'
-            : 'Sign In'}
-        </button>
-      </form>
+        {error && <div className="auth-error">{error}</div>}
 
-      <p className="toggle-container">
-        {isSignUp
-          ? 'Already have an account?'
-          : "Don't have an account?"}{' '}
+        <form className="auth-form" onSubmit={handleSubmit}>
+          <label className="auth-label">
+            Email
+            <input
+              type="email"
+              className="auth-input"
+              placeholder="you@example.com"
+              value={email}
+              onChange={e => setEmail(e.target.value)}
+              required
+              disabled={loading}
+            />
+          </label>
+
+          <label className="auth-label password-wrapper">
+            Password
+            <input
+              type={showPassword ? 'text' : 'password'}
+              className="auth-input"
+              placeholder="••••••••"
+              value={password}
+              onChange={e => setPassword(e.target.value)}
+              required
+              disabled={loading}
+            />
+            <button
+              type="button"
+              className="password-toggle"
+              onClick={() => setShowPassword(v => !v)}
+              tabIndex={-1}
+            >
+              {showPassword ? 'Hide' : 'Show'}
+            </button>
+          </label>
+
+          <button
+            type="submit"
+            className="auth-button"
+            disabled={loading}
+          >
+            {loading
+              ? 'Please wait…'
+              : isSignUp
+              ? 'Sign Up'
+              : 'Sign In'}
+          </button>
+        </form>
+
+        <div className="auth-alt">
+          <span className="divider" />
+          <span className="or">or</span>
+          <span className="divider" />
+        </div>
+
         <button
           type="button"
-          className="toggle-btn"
-          onClick={() => setIsSignUp(prev => !prev)}
+          className="google-button"
+          onClick={handleGoogleSignIn}
           disabled={loading}
         >
-          {isSignUp ? 'Sign In' : 'Sign Up'}
+          <img src={googleLogo} alt="Google logo" className="google-logo" />
+          <span>Continue with Google</span>
         </button>
-      </p>
 
-      <div className="divider">OR</div>
-
-      <button
-        type="button"
-        className="google-btn"
-        onClick={handleGoogleSignIn}
-        disabled={loading}
-      >
-        Continue with Google
-      </button>
+        <p className="auth-toggle">
+          {isSignUp ? 'Already have an account?' : "Don't have an account?"}{' '}
+          <button
+            type="button"
+            className="auth-toggle-btn"
+            onClick={() => setIsSignUp(v => !v)}
+            disabled={loading}
+          >
+            {isSignUp ? 'Sign In' : 'Sign Up'}
+          </button>
+        </p>
+      </div>
     </div>
-  )
+)
 }

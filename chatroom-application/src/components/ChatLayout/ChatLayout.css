@@ -1,0 +1,135 @@
+.chat-layout {
+    display: flex;
+    position: relative;
+    height: 100vh;
+    overflow: hidden;
+    font-family: sans-serif;
+  }
+  
+  /* sidebar */
+  .sidebar {
+    width: 260px;
+    display: flex;
+    flex-direction: column;
+    border-right: 1px solid #ddd;
+    padding: 1rem;
+  }
+  .sidebar-profile {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+  }
+  .profile-pic {
+    width: 40px; height: 40px;
+    border-radius: 50%;
+    background: #ccc;
+  }
+  .profile-name { font-weight: bold; }
+  .profile-status { font-size: 0.85rem; color: #666; }
+  .sidebar-btn,
+  .new-message-btn {
+    margin: 0.5rem 0;
+    padding: 0.5rem;
+    background: var(--c2);
+    border: none;
+    border-radius: 1rem;
+    cursor: pointer;
+  }
+  .chatroom-list {
+    flex: 1;
+    overflow-y: auto;
+    list-style: none;
+    padding: 0;
+    margin: 1rem 0;
+  }
+  .chatroom-list li {
+    padding: 0.5rem;
+    border-radius: 0.5rem;
+    cursor: pointer;
+  }
+  .chatroom-list li.active,
+  .chatroom-list li:hover {
+    background: var(--c1);
+  }
+  
+  /* main chat */
+  .chat-main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+  }
+  .chat-main.empty {
+    justify-content: center;
+    align-items: center;
+    color: #888;
+    font-size: 1.25rem;
+  }
+  .chat-header {
+    display: flex;
+    justify-content: space-between;
+    padding: 1rem;
+    border-bottom: 1px solid #ddd;
+  }
+  .chat-title { margin: 0; }
+  .chat-subtitle { font-size: 0.9rem; color: #666; }
+  .chat-header-actions button {
+    background: none;
+    border: none;
+    font-size: 1.2rem;
+    cursor: pointer;
+  }
+  
+  /* messages area */
+  .message-area {
+    flex: 1;
+    padding: 1rem;
+    overflow-y: auto;
+    background: #f9f9f9;
+  }
+  
+  /* input */
+  .chat-input {
+    display: flex;
+    padding: 0.75rem;
+    border-top: 1px solid #ddd;
+  }
+  .chat-input-plus {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    margin-right: 0.5rem;
+    cursor: pointer;
+  }
+  .chat-input input {
+    flex: 1;
+    padding: 0.5rem 1rem;
+    border: 1px solid #ccc;
+    border-radius: 1rem;
+  }
+  
+  /* details panel */
+  .chat-details {
+    position: absolute;     /* take it out of the flex flow */
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: 300px;
+    background: #fff;
+    padding: 1rem;
+    box-shadow: -4px 0 12px rgba(0,0,0,0.1);
+    z-index: 20;
+    transform: translateX(100%);   /* off‑screen by default */
+    transition: transform 0.3s ease;
+  }
+  .chat-details.open {
+    transform: translateX(0);
+  }
+  .details-close {
+    background: none;
+    border: none;
+    font-size: 1.2rem;
+    margin-bottom: 1rem;
+    cursor: pointer;
+  }
+  

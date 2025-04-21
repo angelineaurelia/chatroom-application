@@ -16,7 +16,7 @@ import { firestore } from '../../firebase'
 import { useAuth } from '../../contexts/AuthContext'
 import './ChatRoomList.css'
 
-// 2. create chatroom list component
+// 2. create ChatRoomList component
 export default function ChatRoomList() {
   const { currentUser } = useAuth()
   const [chatrooms, setChatrooms] = useState([])
@@ -27,7 +27,7 @@ export default function ChatRoomList() {
   const [creating, setCreating] = useState(false)
   const [error, setError] = useState('')
 
-  // 3. load user's chatrooms
+  // 3. fetch chatrooms from firestore
   useEffect(() => {
     if (!currentUser) return
     const roomsRef = collection(firestore, 'chatrooms')

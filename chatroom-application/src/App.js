@@ -13,6 +13,7 @@ import AuthForm      from './components/AuthForm/AuthForm'
 import ChatRoomList  from './components/ChatRoomList/ChatRoomList'
 import ChatRoom      from './components/ChatRoom/ChatRoom'
 import { useAuth }   from './contexts/AuthContext'
+import ChatLayout from './components/ChatLayout/ChatLayout'
 
 // 2. create App component
 function App() {
@@ -33,20 +34,33 @@ function App() {
   return (
     <Router>
       <Routes>
-        <Route path="/login" element={<AuthForm onSubmit={() => {}} />} />
+        {/* public login / signup */}
+        <Route path="/login" element={<AuthForm />} />
+
+        {/* protected chat area */}
         <Route
-          path="/chatrooms"
-          element={isLoggedIn ? <ChatRoomList /> : <Navigate to="/login" />}
+          path="/chatrooms/*"
+          element={
+            currentUser
+              ? <ChatLayout />
+              : <Navigate to="/login" replace />
+          }
         />
+
+        {/* catch‐all: redirect based on auth state */}
         <Route
-          path="/chatrooms/:id"
-          element={isLoggedIn ? <ChatRoom /> : <Navigate to="/login" />}
+          path="*"
+          element={
+            currentUser
+              ? <Navigate to="/chatrooms" replace />
+              : <Navigate to="/login"     replace />
+          }
         />
-        <Route path="*" element={<Navigate to="/login" />} />
       </Routes>
     </Router>
   )
 }
+
 
 export default App
 

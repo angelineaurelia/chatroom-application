@@ -10,68 +10,78 @@ import {
 } from 'firebase/firestore'
 import { firestore } from '../../firebase'
 import { useAuth } from '../../contexts/AuthContext'
+import './ChatRoom.css'
 
 // 2. create MessageList component
 export default function MessageList({ roomId }) {
   const [messages, setMessages] = useState([])
   const bottomRef = useRef()
   const { currentUser } = useAuth()
-  const prevMessagesRef = useRef([])  // store previous messages
 
-  // 3. request notification permission on mount
+  // 3. fetch messages from firestore
   useEffect(() => {
-    const messagesRef = collection(firestore, 'chatrooms', roomId, 'messages')
+    const messagesRef = collection(
+      firestore, 'chatrooms', roomId, 'messages'
+    )
     const q = query(messagesRef, orderBy('createdAt', 'asc'))
-
-    const unsubscribe = onSnapshot(q, snapshot => {
-      const newMsgs = snapshot.docs.map(d => ({ id: d.id, ...d.data() }))
-      setMessages(newMsgs)
-
-      // 4. auto-scroll
-      bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
-
-      // 5. determine which messages are new:
-      const prev = prevMessagesRef.current
-      const prevIds = new Set(prev.map(m => m.id))
-      const fresh = newMsgs.filter(m => !prevIds.has(m.id))
-
-      // 6. notify for each fresh message sent by someone else
-      fresh.forEach(msg => {
-        if (msg.authorId !== currentUser.uid && 'Notification' in window) {
-          // only if permission granted
-          if (Notification.permission === 'granted') {
-            new Notification(`New message in ${roomId}`, {
-              body: `${msg.authorEmail.split('@')[0]}: ${msg.text}`,
-              tag: `${roomId}-${msg.id}`
-            })
+    return onSnapshot(q, snap => {
+      setMessages(
+        snap.docs.map(d => {
+          const data = d.data()
+          return {
+            id: d.id,
+            text: data.text,
+            authorId: data.authorId,
+            authorName: data.authorEmail.split('@')[0],
+            authorPhotoURL: data.authorPhotoURL || '/defaultAvatar.png',
+            createdAt: data.createdAt?.toDate() || new Date()
           }
-        }
-      })
-
-      // update ref
-      prevMessagesRef.current = newMsgs
+        })
+      )
+      bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
     })
+  }, [roomId])
 
-    return unsubscribe
-  }, [roomId, currentUser])
+  // 4. format time
+  const formatTime = date =>
+    date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
 
+  // 5. render the message list
   return (
     <div className="message-list">
-      {messages.map(msg => (
-        <div
-          key={msg.id}
-          className={
-            msg.authorId === currentUser.uid
-              ? 'message message-self'
-              : 'message'
-          }
-        >
-          <div className="message-author">
-            {msg.authorEmail.split('@')[0]}
+      {/* date pill */}
+      <div className="date-separator">Today</div>
+
+      {messages.map(msg => {
+        const isSelf = msg.authorId === currentUser.uid
+        return (
+          <div
+            key={msg.id}
+            className={`message-row ${isSelf ? 'self' : 'other'}`}
+          >
+            {/* avatar for others */}
+            {!isSelf && (
+              <img
+                src={msg.authorPhotoURL}
+                alt={msg.authorName}
+                className="message-avatar"
+              />
+            )}
+
+            {/* bubble */}
+            <div className={`message-block ${isSelf ? 'self' : 'other'}`}>
+              <div className="message-text">{msg.text}</div>
+              <div className="message-meta">
+                {formatTime(msg.createdAt)} • {msg.authorName}
+              </div>
+            </div>
+
+            {/* spacer for self */}
+            {isSelf && <div className="message-avatar-spacer" />}
           </div>
-          <div className="message-text">{msg.text}</div>
-        </div>
-      ))}
+        )
+      })}
+
       <div ref={bottomRef} />
     </div>
   )
