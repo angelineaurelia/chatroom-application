@@ -5,81 +5,95 @@ import React, { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import {
   collection,
+  getDocs,
   addDoc,
   serverTimestamp,
-  updateDoc,
-  doc
+  updateDoc
 } from 'firebase/firestore'
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage'
-import { firestore, storage } from '../../firebase'
 import { useAuth } from '../../contexts/AuthContext'
+import { firestore, storage } from '../../firebase'
 import './ChatLayout.css'
 
 // 2. create ChatCreateModal component
 export default function ChatCreateModal({ isOpen, onClose }) {
   const { currentUser } = useAuth()
   const [allUsers, setAllUsers] = useState([])
-  const [name, setName] = useState('')
-  const [members, setMembers] = useState([])
-  const [file, setFile] = useState(null)
+  const [name, setName]         = useState('')
+  const [members, setMembers]   = useState([])
+  const [file, setFile]         = useState(null)
   const [creating, setCreating] = useState(false)
-  const [error, setError] = useState('')
+  const [error, setError]       = useState('')
 
-  // 3. load users for invite
+  // 3. load users when the modal opens
   useEffect(() => {
-    async function fetch() {
-      const snap = await firestore.collection('users').get()
-      setAllUsers(
-        snap.docs.map(d => ({
-          uid: d.id,
-          email: d.data().email
-        }))
-      )
+    if (!isOpen) return
+    async function fetchUsers() {
+      try {
+        const snap = await getDocs(collection(firestore, 'users'))
+        setAllUsers(
+          snap.docs.map(d => ({ uid: d.id, ...d.data() }))
+        )
+      } catch (err) {
+        console.error('Error fetching users:', err)
+      }
     }
-    if (isOpen) fetch()
+    fetchUsers()
   }, [isOpen])
 
-  // 4. toggle member selection
   function toggleMember(uid) {
-    setMembers(ms => (ms.includes(uid) ? ms.filter(x => x !== uid) : [...ms, uid]))
+    setMembers(prev =>
+      prev.includes(uid) ? prev.filter(id => id !== uid) : [...prev, uid]
+    )
   }
 
-  // 5. handle form submission
+  // 4. handle form submission
   async function handleSubmit(e) {
     e.preventDefault()
+    if (!name.trim()) {
+      setError('Chatroom name is required')
+      return
+    }
     setError('')
-    if (!name.trim()) return setError('Name required')
     setCreating(true)
+
     try {
-      // 6. create room doc
-      const roomRef = await addDoc(collection(firestore, 'chatrooms'), {
-        name: name.trim(),
-        members: [currentUser.uid, ...members],
-        createdAt: serverTimestamp()
-      })
-      // 7. if file, upload to Storage
+      // 5. create the chatroom doc
+      const roomRef = await addDoc(
+        collection(firestore, 'chatrooms'),
+        {
+          name: name.trim(),
+          members: [currentUser.uid, ...members],
+          createdAt: serverTimestamp()
+        }
+      )
+
+      // 6. upload avatar if provided
       if (file) {
         const imgRef = ref(storage, `chatrooms/${roomRef.id}/avatar`)
         await uploadBytes(imgRef, file)
         const url = await getDownloadURL(imgRef)
         await updateDoc(roomRef, { avatarURL: url })
       }
-      // 8. reset & close
-      setName(''); setMembers([]); setFile(null)
+
+      // 7. reset & close
+      setName('')
+      setMembers([])
+      setFile(null)
       onClose()
     } catch (err) {
-      console.error(err)
-      setError('Could not create room')
+      console.error('Error creating chatroom:', err)
+      setError('Failed to create chatroom')
+    } finally {
+      setCreating(false)
     }
-    setCreating(false)
   }
 
   if (!isOpen) return null
 
-  // 9. render the modal
   return createPortal(
     <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-content" onClick={e => e.stopPropagation()}>
+      <div className="modal-card" onClick={e => e.stopPropagation()}>
         <h2>Create New Chatroom</h2>
         {error && <div className="modal-error">{error}</div>}
         <form onSubmit={handleSubmit}>
@@ -106,21 +120,22 @@ export default function ChatCreateModal({ isOpen, onClose }) {
 
           <fieldset>
             <legend>Invite Members</legend>
-            {allUsers.length === 0 && <p>No users found.</p>}
             {allUsers
               .filter(u => u.uid !== currentUser.uid)
               .map(u => (
                 <label key={u.uid} className="invite-checkbox">
                   <input
                     type="checkbox"
-                    value={u.uid}
                     checked={members.includes(u.uid)}
                     onChange={() => toggleMember(u.uid)}
                     disabled={creating}
                   />
-                  {u.email}
+                  {u.name || u.email}
                 </label>
               ))}
+            {allUsers.filter(u => u.uid !== currentUser.uid).length === 0 && (
+              <p>No other registered users.</p>
+            )}
           </fieldset>
 
           <div className="modal-actions">
