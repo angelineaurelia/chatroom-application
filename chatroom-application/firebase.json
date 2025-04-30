@@ -1,11 +1,4 @@
 {
-  "storage": {
-    "rules": "storage.rules"
-  },
-  "firestore": {
-    "rules":   "firestore.rules",
-    "indexes": "firestore.indexes.json"
-  },
   "hosting": {
     "public": "build",
     "ignore": [
@@ -14,10 +7,12 @@
       "**/node_modules/**"
     ],
     "rewrites": [
-      {
-        "source": "**",
-        "destination": "/index.html"
-      }
+      { "source": "**", "destination": "/index.html" }
     ]
+  },
+  "storage": { "rules": "storage.rules" },
+  "firestore": {
+    "rules":   "firestore.rules",
+    "indexes": "firestore.indexes.json"
   }
 }

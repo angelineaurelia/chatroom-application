@@ -1,31 +1,36 @@
 // src/components/ChatLayout/ChatMain.js
 
-// 1. import
+// 1. imports
 import React, { useState, useEffect } from 'react'
 import { useAuth } from '../../contexts/AuthContext'
 import MessageList from '../ChatRoom/MessageList'
 import MessageInput from '../ChatRoom/MessageInput'
-import { doc, onSnapshot, getDoc, serverTimestamp, collection, addDoc } from 'firebase/firestore'
-import { ref, uploadBytes, getDownloadURL }             from 'firebase/storage'
-import { firestore, storage }                           from '../../firebase'
-import AttachModal                                      from './AttachModal'
+import {
+  doc,
+  onSnapshot,
+  getDoc
+} from 'firebase/firestore'
+import { firestore }  from '../../firebase'
+import AttachModal     from './AttachModal'
 import './ChatLayout.css'
 
-// 2. export
+// 2. export ChatMain component
 export default function ChatMain({ activeChat, toggleSidebar }) {
   const { currentUser } = useAuth()
-  const [chatData, setChatData]         = useState(null)
-  const [membersData, setMembersData]   = useState([])
-  const [showSearch, setShowSearch]     = useState(false)
-  const [searchTerm, setSearchTerm]     = useState('')
-  const [showAttach, setShowAttach] = useState(false)
+  const [chatData, setChatData]       = useState(null)
+  const [membersData, setMembersData] = useState([])
+  const [showSearch, setShowSearch]   = useState(false)
+  const [searchTerm, setSearchTerm]   = useState('')
 
-  // 3. load chatroom data
+  // 'media' = images/videos, 'gif' = Tenor GIFs
+  const [attachModalOpen, setAttachModalOpen] = useState(false)
+  const [attachTab, setAttachTab]             = useState('media')
+
+  // load chatroom + members
   useEffect(() => {
     if (!activeChat) {
       setChatData(null)
       setMembersData([])
-      setSearchTerm('')
       setShowSearch(false)
       return
     }
@@ -36,26 +41,16 @@ export default function ChatMain({ activeChat, toggleSidebar }) {
       const data = snap.data()
       setChatData({ id: snap.id, ...data })
 
-      // dedupe UIDs
       const uids = Array.from(new Set(data.members || []))
-      // fetch user profiles
       const profiles = await Promise.all(
         uids.map(async uid => {
           const userSnap = await getDoc(doc(firestore, 'users', uid))
-          if (userSnap.exists()) {
-            const u = userSnap.data()
-            const baseName = u.name || u.email || 'Unknown'
-            return {
-              uid,
-              name:
-                uid === currentUser.uid
-                  ? `${baseName} (You)`
-                  : baseName
-            }
-          }
+          const base = userSnap.exists()
+            ? (userSnap.data().name || userSnap.data().email)
+            : 'Unknown'
           return {
             uid,
-            name: uid === currentUser.uid ? '(You)' : 'Unknown'
+            name: uid === currentUser.uid ? `${base} (You)` : base
           }
         })
       )
@@ -81,87 +76,89 @@ export default function ChatMain({ activeChat, toggleSidebar }) {
     )
   }
 
-  // build subtitle
-  const ordered = [
+  // build the “Members: …” subtitle
+  const ordered    = [
     ...membersData.filter(m => m.uid === currentUser.uid),
     ...membersData.filter(m => m.uid !== currentUser.uid)
   ]
-  const names = ordered.map(m => m.name)
+  const names      = ordered.map(m => m.name)
   const firstThree = names.slice(0, 3)
-  const subtitle =
+  const subtitle   =
     names.length <= 3
       ? firstThree.join(', ')
       : `${firstThree.join(', ')} and ${names.length - 3} more`
 
   return (
-    <main className="chat-main">
-      <header className="chat-header">
-        {/* mobile “hamburger” */}
-        <button
-          className="mobile-menu-btn"
-          onClick={toggleSidebar}
-          aria-label="Toggle chat list"
-        >
-          ☰
-        </button>
-
-        <div className="chat-header-left">
-          <h2 className="chat-title">{chatData.name}</h2>
-          <div className="chat-subtitle">{subtitle}</div>
-        </div>
-
-        {/* search‐for‐message button */}
-        <div className="chat-header-actions">
+    <>
+      <main className="chat-main">
+        <header className="chat-header">
           <button
-            className="search-msg-btn"
-            onClick={() => {
-              setShowSearch(show => !show)
-              setSearchTerm('')
-            }}
-            aria-label="Search messages"
+            className="mobile-menu-btn"
+            onClick={toggleSidebar}
+            aria-label="Toggle chat list"
           >
-            🔍
+            ☰
           </button>
-        </div>
-      </header>
 
-      {/* search bar (toggles open) */}
-      {showSearch && (
-        <div className="chat-search-bar">
-          <input
-            type="text"
-            placeholder="Search messages…"
-            value={searchTerm}
-            onChange={e => setSearchTerm(e.target.value)}
-            autoFocus
-          />
-        </div>
-      )}
+          <div className="chat-header-left">
+            <h2 className="chat-title">{chatData.name}</h2>
+            <div className="chat-subtitle">{subtitle}</div>
+          </div>
 
-      {/* messages, pass searchTerm down */}
-      <section className="message-area">
-        <MessageList roomId={activeChat} searchTerm={searchTerm} />
-      </section>
+          <div className="chat-header-actions">
+            <button
+              className="search-msg-btn"
+              onClick={() => {
+                setShowSearch(v => !v)
+                setSearchTerm('')
+              }}
+              aria-label="Search messages"
+            >
+              🔍
+            </button>
+          </div>
+        </header>
 
-      {/* input */}
-      <footer className="chat-input">
-        <button
-          className="chat-input-plus"
-          aria-label="Attach media"
-          onClick={() => setShowAttach(true)}
-        >
-          ＋
-        </button>
-        <MessageInput roomId={activeChat} />
-      </footer>
+        {showSearch && (
+          <div className="chat-search-bar">
+            <input
+              type="text"
+              placeholder="Search messages…"
+              value={searchTerm}
+              onChange={e => setSearchTerm(e.target.value)}
+              autoFocus
+            />
+          </div>
+        )}
 
-      {showAttach && (
+        <section className="message-area">
+          <MessageList roomId={activeChat} searchTerm={searchTerm} />
+        </section>
+
+        <footer className="chat-input">
+          {/* open the AttachModal in 'media' tab */}
+          <button
+            className="chat-input-plus"
+            aria-label="Attach image/video"
+            onClick={() => {
+              setAttachTab('media')
+              setAttachModalOpen(true)
+            }}
+          >
+            ＋
+          </button>
+          <MessageInput roomId={activeChat} />
+        </footer>
+      </main>
+
+      {/* single modal with two tabs */}
+      {attachModalOpen && (
         <AttachModal
           roomId={activeChat}
-          onClose={() => setShowAttach(false)}
-          author={currentUser}
+          initialTab={attachTab}
+          onClose={() => setAttachModalOpen(false)}
         />
       )}
-    </main>
+    </>
   )
 }

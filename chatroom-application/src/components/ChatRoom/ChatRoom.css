@@ -69,10 +69,26 @@
   white-space: pre-wrap;
 }
 
-/* footer meta: time • name */
+/* footer meta: time • name • unsend */
 .message-meta {
   margin-top: 0.25rem;
   font-size: 0.75rem;
   color: var(--c5);
   text-align: right;
+}
+
+.message-block.other .message-meta {
+  text-align: left;
+}
+
+
+.unsend-meta-btn {
+  all: unset;
+  cursor: pointer;
+  color: var(--c5);
+  font-size: 0.75rem;
+}
+
+.unsend-meta-btn:hover {
+  text-decoration: underline;
 }

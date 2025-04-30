@@ -10,8 +10,6 @@ import {
 } from 'react-router-dom'
 
 import AuthForm      from './components/AuthForm/AuthForm'
-import ChatRoomList  from './components/ChatRoomList/ChatRoomList'
-import ChatRoom      from './components/ChatRoom/ChatRoom'
 import { useAuth }   from './contexts/AuthContext'
 import ChatLayout from './components/ChatLayout/ChatLayout'
 

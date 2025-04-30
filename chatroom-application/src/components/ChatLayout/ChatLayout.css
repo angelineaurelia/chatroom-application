@@ -463,7 +463,7 @@ MODALS
 .modal-actions {
   display: flex;
   justify-content: space-between;
-  padding: 1rem 1.5rem 1.5rem;
+  padding: 1rem 1rem 1rem;
   background: white;
 }
 
@@ -583,13 +583,6 @@ MODALS
 .member-pill.selected {
   background: var(--c3);
   color: black;
-}
-
-.modal-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 0.75rem;
-  margin-top: 1rem;
 }
 
 .pill {
@@ -763,10 +756,12 @@ MOBILE
   padding: 0;
   cursor: pointer;
 }
+
 .mobile-footer-nav .tab-label {
   font-size: 0.6rem;
   margin-top: 2px;
 }
+
 .mobile-footer-nav .create-btn {
   font-size: 1.6rem;
   line-height: 1;
@@ -822,45 +817,46 @@ MOBILE
     padding: 0.5rem 1rem;
     cursor: pointer;
     color: var(--c5);
-  }
+}
 }
 
 @media (max-width: 400px) {
-  .modal-card {
-    width: 100%;
-    max-width: none;
-    border-radius: 0.5rem;
-  }
+.modal-card {
+  width: 100%;
+  max-width: none;
+  border-radius: 0.5rem;
+}
 }
 
 .item-label {
-  flex: 1;
-  color: var(--c5);
-  font-weight: 500;
+flex: 1;
+color: var(--c5);
+font-weight: 500;
 }
 .item-value {
-  color: var(--c5);
-  margin-right: 0.5rem;
-  text-align: right;
-  flex-shrink: 0;
+color: var(--c5);
+margin-right: 0.5rem;
+text-align: right;
+flex-shrink: 0;
 }
 
 .item-chevron {
-  color: var(--c4);
-  font-size: 1.1rem;
-  flex-shrink: 0;
+color: var(--c4);
+font-size: 1.1rem;
+flex-shrink: 0;
 }
 
-/* =========================================================
-ATTACHMENT MODAL
-============================================================ */
-
-.attach-modal {
+/* ===============================================
+  AttachModal
+  =============================================== */
+  .attach-modal {
   width: 90%;
   max-width: 360px;
   max-height: calc(100vh - 4rem);
   display: flex;
   flex-direction: column;
+  background: white;
+  border-radius: 1rem;
   overflow: hidden;
 }
 
@@ -883,23 +879,76 @@ ATTACHMENT MODAL
   color: var(--c4);
 }
 
-/* body */
-.attach-body {
-  flex: 1;
+/* body (flex container so grid/input scroll) */
+.attach-modal .attach-body {
+  flex: 1 1 auto;
   display: flex;
   flex-direction: column;
   padding: 1rem;
-  gap: 1rem;
-}
-/* file input */
-.attach-body input[type="file"] {
-  border: 1px dashed #ccc;
-  padding: 1rem;
-  border-radius: 0.5rem;
-  cursor: pointer;
+  overflow: hidden;
 }
 
-/* placeholder for GIF tab (implement later)*/
+/* file-picker (pill style) */
+.attach-body input[type="file"] {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  margin-bottom: 1rem;
+  background: var(--c1);
+  color: var(--c5);
+  font-size: 1rem;
+  border: none;
+  border-radius: 2rem;
+  text-align: center;
+  cursor: pointer;
+  outline: none;
+  box-sizing: border-box;
+  transition: box-shadow 0.2s;
+}
+.attach-body input[type="file"]:focus {
+  box-shadow: 0 0 0 2px rgba(0,126,167,0.3);
+}
+
+/* gif-search input (pill style) */
+.attach-body input[type="text"] {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  margin-bottom: 1rem;
+  background: var(--c1);
+  color: var(--c5);
+  font-size: 1rem;
+  border: none;
+  border-radius: 2rem;
+  outline: none;
+  box-sizing: border-box;
+  transition: box-shadow 0.2s;
+}
+
+.attach-body input[type="text"]:focus {
+  box-shadow: 0 0 0 2px rgba(0,126,167,0.3);
+}
+
+/* gif grid (2-column, scrollable) */
+.attach-modal .gif-grid {
+  flex: 1 1 auto;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.5rem;
+  overflow-y: auto;
+  padding-top: 0.5rem;
+}
+
+.attach-modal .gif-grid img {
+  width: 100%;
+  border-radius: 0.5rem;
+  cursor: pointer;
+  transition: transform 0.1s;
+}
+
+.attach-modal .gif-grid img:hover {
+  transform: scale(1.05);
+}
+
+/* placeholder (when no GIFs yet) */
 .attach-placeholder {
   flex: 1;
   display: flex;
@@ -907,11 +956,4 @@ ATTACHMENT MODAL
   justify-content: center;
   color: #666;
   font-style: italic;
-}
-
-/* size and rounding for media attachments */
-.message-media {
-  max-width: 60%;
-  border-radius: 0.5rem;
-  margin-bottom: 0.25rem;
 }

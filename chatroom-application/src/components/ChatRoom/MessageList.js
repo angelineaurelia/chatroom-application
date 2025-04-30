@@ -1,6 +1,6 @@
 // src/components/ChatRoom/MessageList.js
 
-// 1. import
+// 1. imports
 import React, {
   useEffect,
   useRef,
@@ -21,16 +21,16 @@ import { firestore } from '../../firebase'
 import defaultAvatar from '../../assets/defaultAvatar.png'
 import './ChatRoom.css'
 
-// 2. export
+// 2. export MessageList component
 export default function MessageList({ roomId, searchTerm = '' }) {
   const { currentUser } = useAuth()
-  const [messages, setMessages]             = useState([])
-  const [profiles, setProfiles]             = useState({})
-  const [highlightedId, setHighlightedId]   = useState(null)
+  const [messages, setMessages]           = useState([])
+  const [profiles, setProfiles]           = useState({})
+  const [highlightedId, setHighlightedId] = useState(null)
   const bottomRef = useRef()
   const msgRefs   = useRef({})
 
-  // 3. subscribe to messages include mediaURL/mediaType
+  // 3. subscribe to messages
   useEffect(() => {
     if (!roomId) {
       setMessages([])
@@ -96,7 +96,7 @@ export default function MessageList({ roomId, searchTerm = '' }) {
     })
   }, [messages, currentUser, profiles])
 
-  // 6. search highlight
+  // 6. highlight search results
   useEffect(() => {
     if (!searchTerm) {
       setHighlightedId(null)
@@ -115,7 +115,7 @@ export default function MessageList({ roomId, searchTerm = '' }) {
     }
   }, [searchTerm, messages])
 
-  // 7. renderHighlighted helper
+  // 7. helper to wrap matching text in <mark>
   function renderHighlighted(text) {
     if (!searchTerm) return text
     const esc   = searchTerm.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&')
@@ -125,7 +125,7 @@ export default function MessageList({ roomId, searchTerm = '' }) {
     )
   }
 
-  // 8. unsend
+  // 8. unsend (mark deleted)
   async function handleUnsend(messageId) {
     try {
       const refMsg = doc(firestore, 'chatrooms', roomId, 'messages', messageId)
@@ -135,17 +135,15 @@ export default function MessageList({ roomId, searchTerm = '' }) {
     }
   }
 
-  // 9. date separator logic
+  // 9. date‐separator logic
   function getDateLabel(date) {
-    const today = new Date()
-    const dDate = new Date(date.getFullYear(), date.getMonth(), date.getDate())
-    const dToday = new Date(today.getFullYear(), today.getMonth(), today.getDate())
+    const today   = new Date()
+    const dDate   = new Date(date.getFullYear(), date.getMonth(), date.getDate())
+    const dToday  = new Date(today.getFullYear(), today.getMonth(), today.getDate())
     const diffDays = (dToday - dDate) / (1000 * 60 * 60 * 24)
     if (diffDays === 0) return 'Today'
     if (diffDays === 1) return 'Yesterday'
-    if (diffDays < 7) {
-      return date.toLocaleDateString(undefined, { weekday: 'short' })
-    }
+    if (diffDays < 7)  return date.toLocaleDateString(undefined, { weekday: 'short' })
     const dd = String(date.getDate()).padStart(2, '0')
     const mm = String(date.getMonth() + 1).padStart(2, '0')
     const yy = String(date.getFullYear()).slice(-2)
@@ -154,7 +152,7 @@ export default function MessageList({ roomId, searchTerm = '' }) {
   const formatTime = date =>
     date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
 
-  // 10. build items array with separators
+  // 10. interleave date separators
   const items = []
   let lastLabel = null
   messages.forEach(msg => {
@@ -192,6 +190,7 @@ export default function MessageList({ roomId, searchTerm = '' }) {
             ref={el => (msgRefs.current[msg.id] = el)}
             className={`message-row ${isSelf ? 'self' : 'other'}`}
           >
+            {/* avatar for others */}
             {!isSelf && (
               <img
                 src={profile.photoURL}
@@ -200,6 +199,7 @@ export default function MessageList({ roomId, searchTerm = '' }) {
               />
             )}
 
+            {/* bubble */}
             <div
               className={
                 `message-block ${isSelf ? 'self' : 'other'}` +
@@ -211,42 +211,50 @@ export default function MessageList({ roomId, searchTerm = '' }) {
                 <div className="message-text deleted">
                   <em>{profile.name} unsent a message</em>
                 </div>
-              ) : msg.mediaURL ? (
-                msg.mediaType === 'video' ? (
-                  <video
-                    src={msg.mediaURL}
-                    controls
-                    className="message-media"
-                  />
-                ) : (
-                  <img
-                    src={msg.mediaURL}
-                    alt="attachment"
-                    className="message-media"
-                  />
-                )
               ) : (
                 <>
-                  <div className="message-text">
-                    {renderHighlighted(msg.text)}
-                  </div>
+                  {/* media or text */}
+                  {msg.mediaURL ? (
+                    msg.mediaType === 'video' ? (
+                      <video
+                        src={msg.mediaURL}
+                        controls
+                        className="message-media"
+                      />
+                    ) : msg.mediaType === 'gif' ? (
+                      <img src={msg.mediaURL} alt="GIF" className="message-media" />
+                    ) : (
+                      <img
+                        src={msg.mediaURL}
+                        alt="attachment"
+                        className="message-media"
+                      />
+                    )
+                  ) : (
+                    <div className="message-text">
+                      {renderHighlighted(msg.text)}
+                    </div>
+                  )}
+
+                  {/* inline meta + Unsend */}
                   <div className="message-meta">
-                    {formatTime(msg.createdAt)} • {profile.name}
+                    {formatTime(msg.createdAt)} • {profile.name}
+                    {isSelf && (
+                      <> • 
+                        <button
+                          className="unsend-meta-btn"
+                          onClick={() => handleUnsend(msg.id)}
+                        >
+                          Unsend
+                        </button>
+                      </>
+                    )}
                   </div>
                 </>
               )}
-
-              {isSelf && !msg.isDeleted && (
-                <button
-                  className="unsend-btn"
-                  onClick={() => handleUnsend(msg.id)}
-                  title="Unsend"
-                >
-                  🗑️
-                </button>
-              )}
             </div>
 
+            {/* spacer for self */}
             {isSelf && <div className="message-avatar-spacer" />}
           </div>
         )

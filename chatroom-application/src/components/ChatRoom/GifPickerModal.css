@@ -1,0 +1,31 @@
+.gif-modal-overlay {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.5);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .gif-modal-card {
+    width: 90%; max-width: 480px;
+    background: white; border-radius: 1rem;
+    overflow: hidden; display: flex; flex-direction: column;
+  }
+  .gif-modal-header {
+    display: flex; justify-content: space-between;
+    padding: 1rem; border-bottom: 1px solid #eee;
+  }
+  .gif-search input {
+    width: 100%; padding: 0.5rem;
+    border: 1px solid #ccc; border-radius: 0.5rem;
+    margin: 0.5rem 1rem;
+  }
+  .gif-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(80px,1fr));
+    gap: 0.5rem; padding: 0.5rem 1rem 1rem;
+  }
+  .gif-grid img {
+    width: 100%; cursor: pointer;
+    border-radius: 0.5rem;
+    transition: transform .1s;
+  }
+  .gif-grid img:hover { transform: scale(1.05) }
+  
