@@ -1,59 +1,117 @@
 // src/components/ChatLayout/ChatSidebar.js
 
-// 1. imports
+// 1. import
 import React, { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { collection, query, where, onSnapshot } from 'firebase/firestore'
+import {
+  collection,
+  query,
+  where,
+  orderBy,
+  limit,
+  onSnapshot,
+  doc,
+  getDoc
+} from 'firebase/firestore'
 import { useAuth } from '../../contexts/AuthContext'
 import { firestore } from '../../firebase'
-import ChatCreateModal from './ChatCreateModal'
-import UserProfileModal from './UserProfileModal'
 import defaultAvatar from '../../assets/defaultAvatar.png'
 import './ChatLayout.css'
 
-// 2. create ChatSidebar component
-export default function ChatSidebar({ activeChat, setActiveChat }) {
+export default function ChatSidebar({
+  activeChat,
+  setActiveChat,
+  isOpen,
+  onClose,
+  onOpenCreate,
+  onOpenProfile
+}) {
   const { currentUser, logout } = useAuth()
   const navigate = useNavigate()
 
-  const [chatrooms, setChatrooms] = useState([])
-  const [searchTerm, setSearchTerm] = useState('')
-  const [createModalOpen, setCreateModalOpen] = useState(false)
-  const [profileModalOpen, setProfileModalOpen] = useState(false)
+  const [chatrooms, setChatrooms]       = useState([])
+  const [searchTerm, setSearchTerm]     = useState('')
+  const [lastMessages, setLastMessages] = useState({})
 
-  // 3. load chatrooms that include this user
+  // 4. load all rooms you belong to
   useEffect(() => {
     if (!currentUser) return
     const roomsRef = collection(firestore, 'chatrooms')
     const q = query(
       roomsRef,
-      where('members', 'array-contains', currentUser.uid)
+      where('members', 'array-contains', currentUser.uid),
+      orderBy('createdAt', 'desc')
     )
-    const unsub = onSnapshot(
-      q,
-      snap => setChatrooms(snap.docs.map(d => ({ id: d.id, ...d.data() }))),
-      err => console.error('Failed to load chatrooms:', err)
-    )
-    return unsub
+    return onSnapshot(q, snap => {
+      setChatrooms(snap.docs.map(d => ({ id: d.id, ...d.data() })))
+    })
   }, [currentUser])
 
-  // 4. sign out
-  const handleLogout = async () => {
-    try {
-      await logout()
-      navigate('/login', { replace: true })
-    } catch (err) {
-      console.error('Logout failed:', err)
-    }
-  }
+  // 5. for each room, listen to its latest message
+  useEffect(() => {
+    const unsubscribes = []
+    chatrooms.forEach(room => {
+      const msgsRef = collection(
+        firestore,
+        'chatrooms',
+        room.id,
+        'messages'
+      )
+      const recentQuery = query(
+        msgsRef,
+        orderBy('createdAt', 'desc'),
+        limit(1)
+      )
+      const unsub = onSnapshot(recentQuery, async snap => {
+        if (!snap.empty) {
+          const data = snap.docs[0].data()
+          const at = data.createdAt?.toDate() || null
+          const isDeleted = data.isDeleted || false
 
-  // 5. search chatrooms by name
-  const filteredRooms = chatrooms.filter(room =>
-    room.name.toLowerCase().includes(searchTerm.toLowerCase())
+          // fetch author name
+          let authorName = ''
+          try {
+            const userSnap = await getDoc(
+              doc(firestore, 'users', data.authorId)
+            )
+            if (userSnap.exists()) {
+              const u = userSnap.data()
+              authorName = u.name || u.email.split('@')[0]
+            }
+          } catch {
+            // ignore
+          }
+
+          setLastMessages(prev => ({
+            ...prev,
+            [room.id]: { text: data.text, at, isDeleted, authorName }
+          }))
+        }
+      })
+      unsubscribes.push(unsub)
+    })
+    return () => unsubscribes.forEach(fn => fn())
+  }, [chatrooms])
+
+  // format HH:mm
+  const fmtTime = date =>
+    date
+      ? date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      : ''
+
+  // filter by name
+  const filtered = chatrooms.filter(r =>
+    r.name.toLowerCase().includes(searchTerm.toLowerCase())
   )
 
+  // logout
+  const handleLogout = async () => {
+    await logout()
+    navigate('/login', { replace: true })
+  }
+
   return (
-    <aside className="sidebar">
+    <aside className={`sidebar${isOpen ? ' open' : ''}`}>
       {/* profile */}
       <div className="sidebar-profile">
         <img
@@ -71,7 +129,7 @@ export default function ChatSidebar({ activeChat, setActiveChat }) {
               <button
                 type="button"
                 className="profile-edit-btn"
-                onClick={() => setProfileModalOpen(true)}
+                onClick={onOpenProfile}
                 title="Edit Profile"
               >
                 ✎
@@ -98,41 +156,54 @@ export default function ChatSidebar({ activeChat, setActiveChat }) {
         onChange={e => setSearchTerm(e.target.value)}
       />
 
-      {/* chatroom list */}
+      {/* room list */}
       <ul className="chatroom-list">
-        {filteredRooms.length > 0 ? (
-          filteredRooms.map(room => (
-            <li
-              key={room.id}
-              className={activeChat === room.id ? 'active' : ''}
-              onClick={() => setActiveChat(room.id)}
-            >
-              {room.name}
-            </li>
-          ))
+        {filtered.length > 0 ? (
+          filtered.map(room => {
+            const last = lastMessages[room.id] || {}
+            const isActive = room.id === activeChat
+
+            return (
+              <li
+                key={room.id}
+                className={isActive ? 'active' : ''}
+                onClick={() => {
+                  setActiveChat(room.id)
+                  onClose()    /* hide sidebar on mobile */
+                }}
+              >
+                <div className="room-heading">{room.name}</div>
+
+                {last.at && (
+                  <div className="room-subheading">
+                    <span className="room-last-text">
+                      {last.isDeleted
+                        ? `${last.authorName} unsent a message`
+                        : last.text.length > 30
+                        ? last.text.slice(0, 30) + '…'
+                        : last.text}
+                    </span>
+                    <span className="room-last-time">
+                      {fmtTime(last.at)}
+                    </span>
+                  </div>
+                )}
+              </li>
+            )
+          })
         ) : (
           <li className="no-results">No chatrooms found.</li>
         )}
       </ul>
 
-      {/* new chatroom */}
+      {/* new Chat */}
       <button
         type="button"
         className="new-message-btn"
-        onClick={() => setCreateModalOpen(true)}
+        onClick={onOpenCreate}
       >
         New Message +
       </button>
-
-      {/* modals */}
-      <ChatCreateModal
-        isOpen={createModalOpen}
-        onClose={() => setCreateModalOpen(false)}
-      />
-      <UserProfileModal
-        isOpen={profileModalOpen}
-        onClose={() => setProfileModalOpen(false)}
-      />
     </aside>
   )
 }

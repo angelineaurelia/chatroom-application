@@ -1,6 +1,6 @@
 // src/components/ChatLayout/ChatMain.js
 
-// 1. imports
+// 1. import
 import React, { useState, useEffect } from 'react'
 import { doc, onSnapshot, getDoc } from 'firebase/firestore'
 import { useAuth } from '../../contexts/AuthContext'
@@ -9,16 +9,21 @@ import MessageList from '../ChatRoom/MessageList'
 import MessageInput from '../ChatRoom/MessageInput'
 import './ChatLayout.css'
 
-// 2. create ChatMain component
+// 2. export
 export default function ChatMain({ activeChat, toggleSidebar }) {
   const { currentUser } = useAuth()
-  const [chatData, setChatData]     = useState(null)
-  const [membersData, setMembersData] = useState([])
+  const [chatData, setChatData]         = useState(null)
+  const [membersData, setMembersData]   = useState([])
+  const [showSearch, setShowSearch]     = useState(false)
+  const [searchTerm, setSearchTerm]     = useState('')
 
+  // 3. load chatroom data
   useEffect(() => {
     if (!activeChat) {
       setChatData(null)
       setMembersData([])
+      setSearchTerm('')
+      setShowSearch(false)
       return
     }
 
@@ -28,9 +33,9 @@ export default function ChatMain({ activeChat, toggleSidebar }) {
       const data = snap.data()
       setChatData({ id: snap.id, ...data })
 
-      // 3. dedupe UIDs
+      // dedupe UIDs
       const uids = Array.from(new Set(data.members || []))
-      // 4. fetch user profiles
+      // fetch user profiles
       const profiles = await Promise.all(
         uids.map(async uid => {
           const userSnap = await getDoc(doc(firestore, 'users', uid))
@@ -57,7 +62,7 @@ export default function ChatMain({ activeChat, toggleSidebar }) {
     return unsubscribe
   }, [activeChat, currentUser.uid])
 
-  // 5. placeholder UIs
+  // placeholder UIs
   if (!activeChat) {
     return (
       <main className="chat-main empty">
@@ -73,22 +78,20 @@ export default function ChatMain({ activeChat, toggleSidebar }) {
     )
   }
 
-  // 6. build subtitle: up to 3 names, then “and N more”
-  const orderedMembers = [
+  // build subtitle
+  const ordered = [
     ...membersData.filter(m => m.uid === currentUser.uid),
     ...membersData.filter(m => m.uid !== currentUser.uid)
   ]
-  const names = orderedMembers.map(m => m.name)
+  const names = ordered.map(m => m.name)
   const firstThree = names.slice(0, 3)
   const subtitle =
     names.length <= 3
       ? firstThree.join(', ')
       : `${firstThree.join(', ')} and ${names.length - 3} more`
 
-  // 7. render the main chat area
   return (
     <main className="chat-main">
-      {/* header */}
       <header className="chat-header">
         {/* mobile “hamburger” */}
         <button
@@ -103,11 +106,38 @@ export default function ChatMain({ activeChat, toggleSidebar }) {
           <h2 className="chat-title">{chatData.name}</h2>
           <div className="chat-subtitle">{subtitle}</div>
         </div>
+
+        {/* search‐for‐message button */}
+        <div className="chat-header-actions">
+          <button
+            className="search-msg-btn"
+            onClick={() => {
+              setShowSearch(show => !show)
+              setSearchTerm('')
+            }}
+            aria-label="Search messages"
+          >
+            🔍
+          </button>
+        </div>
       </header>
 
-      {/* messages */}
+      {/* search bar (toggles open) */}
+      {showSearch && (
+        <div className="chat-search-bar">
+          <input
+            type="text"
+            placeholder="Search messages…"
+            value={searchTerm}
+            onChange={e => setSearchTerm(e.target.value)}
+            autoFocus
+          />
+        </div>
+      )}
+
+      {/* messages, pass searchTerm down */}
       <section className="message-area">
-        <MessageList roomId={activeChat} />
+        <MessageList roomId={activeChat} searchTerm={searchTerm} />
       </section>
 
       {/* input */}

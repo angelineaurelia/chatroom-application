@@ -1,91 +1,63 @@
 // src/components/ChatLayout/ChatCreateModal.js
 
-// 1. imports
+// 1. import
 import React, { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import {
   collection,
-  getDocs,
   addDoc,
   serverTimestamp,
-  updateDoc
+  getDocs
 } from 'firebase/firestore'
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage'
-import { useAuth } from '../../contexts/AuthContext'
-import { firestore, storage } from '../../firebase'
+import { firestore, auth } from '../../firebase'
 import './ChatLayout.css'
 
-// 2. create ChatCreateModal component
 export default function ChatCreateModal({ isOpen, onClose }) {
-  const { currentUser } = useAuth()
-  const [allUsers, setAllUsers] = useState([])
-  const [name, setName]         = useState('')
-  const [members, setMembers]   = useState([])
-  const [file, setFile]         = useState(null)
-  const [creating, setCreating] = useState(false)
-  const [error, setError]       = useState('')
+  const me = auth.currentUser.uid
 
-  // 3. load users when the modal opens
+  const [name, setName]         = useState('')
+  const [members, setMembers]   = useState([me])
+  const [allUsers, setAllUsers] = useState([])
+  const [saving, setSaving]     = useState(false)
+
+  // 2. load all users when modal opens
   useEffect(() => {
     if (!isOpen) return
     async function fetchUsers() {
-      try {
-        const snap = await getDocs(collection(firestore, 'users'))
-        setAllUsers(
-          snap.docs.map(d => ({ uid: d.id, ...d.data() }))
-        )
-      } catch (err) {
-        console.error('Error fetching users:', err)
-      }
+      const usersCol = collection(firestore, 'users')
+      const snap     = await getDocs(usersCol)
+      setAllUsers(
+        snap.docs.map(d => ({
+          uid:   d.id,
+          name:  d.data().name || d.data().email.split('@')[0]
+        }))
+      )
     }
     fetchUsers()
   }, [isOpen])
 
-  function toggleMember(uid) {
-    setMembers(prev =>
-      prev.includes(uid) ? prev.filter(id => id !== uid) : [...prev, uid]
-    )
-  }
+  // 3. only the “other” users to invite
+  const invitees = allUsers.filter(u => u.uid !== me)
 
-  // 4. handle form submission
-  async function handleSubmit(e) {
+  // 4. create the room
+  async function handleCreate(e) {
     e.preventDefault()
-    if (!name.trim()) {
-      setError('Chatroom name is required')
-      return
-    }
-    setError('')
-    setCreating(true)
-
+    setSaving(true)
     try {
-      // 5. create the chatroom doc
-      const roomRef = await addDoc(
+      await addDoc(
         collection(firestore, 'chatrooms'),
         {
-          name: name.trim(),
-          members: [currentUser.uid, ...members],
+          name,
+          members,
+          createdBy: me,
           createdAt: serverTimestamp()
         }
       )
-
-      // 6. upload avatar if provided
-      if (file) {
-        const imgRef = ref(storage, `chatrooms/${roomRef.id}/avatar`)
-        await uploadBytes(imgRef, file)
-        const url = await getDownloadURL(imgRef)
-        await updateDoc(roomRef, { avatarURL: url })
-      }
-
-      // 7. reset & close
-      setName('')
-      setMembers([])
-      setFile(null)
       onClose()
     } catch (err) {
-      console.error('Error creating chatroom:', err)
-      setError('Failed to create chatroom')
+      console.error('Create chatroom failed', err)
     } finally {
-      setCreating(false)
+      setSaving(false)
     }
   }
 
@@ -93,57 +65,74 @@ export default function ChatCreateModal({ isOpen, onClose }) {
 
   return createPortal(
     <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-card" onClick={e => e.stopPropagation()}>
-        <h2>Create New Chatroom</h2>
-        {error && <div className="modal-error">{error}</div>}
-        <form onSubmit={handleSubmit}>
-          <label>
-            Picture (optional)
-            <input
-              type="file"
-              accept="image/*"
-              onChange={e => setFile(e.target.files[0] || null)}
-              disabled={creating}
-            />
-          </label>
+      <div
+        className="modal-card create-modal"
+        onClick={e => e.stopPropagation()}
+      >
+        <header className="create-header">
+          <h2>Create New Chatroom</h2>
+          <button className="close-btn" onClick={onClose}>×</button>
+        </header>
 
+        <form className="create-body" onSubmit={handleCreate}>
           <label>
-            Name
+            Chatroom Name
             <input
               type="text"
               value={name}
               onChange={e => setName(e.target.value)}
-              disabled={creating}
+              placeholder="Enter a name…"
               required
+              disabled={saving}
             />
           </label>
 
-          <fieldset>
-            <legend>Invite Members</legend>
-            {allUsers
-              .filter(u => u.uid !== currentUser.uid)
-              .map(u => (
-                <label key={u.uid} className="invite-checkbox">
-                  <input
-                    type="checkbox"
-                    checked={members.includes(u.uid)}
-                    onChange={() => toggleMember(u.uid)}
-                    disabled={creating}
-                  />
-                  {u.name || u.email}
-                </label>
+          <label>
+            Invite Members
+            <div className="member-select">
+              {invitees.map(u => (
+                <button
+                  key={u.uid}
+                  type="button"
+                  className={
+                    'member-pill' +
+                    (members.includes(u.uid) ? ' selected' : '')
+                  }
+                  onClick={() => {
+                    setMembers(curr =>
+                      curr.includes(u.uid)
+                        ? curr.filter(id => id !== u.uid)
+                        : [...curr, u.uid]
+                    )
+                  }}
+                  disabled={saving}
+                >
+                  {u.name}
+                </button>
               ))}
-            {allUsers.filter(u => u.uid !== currentUser.uid).length === 0 && (
-              <p>No other registered users.</p>
-            )}
-          </fieldset>
+              {invitees.length === 0 && (
+                <div className="no-results">
+                  No other users to invite.
+                </div>
+              )}
+            </div>
+          </label>
 
           <div className="modal-actions">
-            <button type="button" onClick={onClose} disabled={creating}>
+            <button
+              type="button"
+              className="pill secondary"
+              onClick={onClose}
+              disabled={saving}
+            >
               Cancel
             </button>
-            <button type="submit" disabled={creating}>
-              {creating ? 'Creating…' : 'Create'}
+            <button
+              type="submit"
+              className="pill primary"
+              disabled={saving || !name.trim()}
+            >
+              {saving ? 'Creating…' : 'Create'}
             </button>
           </div>
         </form>

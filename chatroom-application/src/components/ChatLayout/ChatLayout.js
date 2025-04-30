@@ -1,42 +1,55 @@
 // src/components/ChatLayout/ChatLayout.js
 
-// 1. imports
+// 1. import
 import React, { useState, useEffect } from 'react'
-import ChatSidebar from './ChatSidebar'
-import ChatMain    from './ChatMain'
+import ChatSidebar      from './ChatSidebar'
+import ChatMain         from './ChatMain'
+import ChatCreateModal  from './ChatCreateModal'
+import UserProfileModal from './UserProfileModal'
 import './ChatLayout.css'
 
 export default function ChatLayout() {
-  const [activeChat, setActiveChat] = useState(null) // currently open chat room ID
-  const [showSidebar, setShowSidebar] = useState( // sidebar visibility
-    window.innerWidth > 768
-  )
+  const [activeChat, setActiveChat]     = useState(null)   // which chat is active
+  const [sidebarOpen, setSidebarOpen]   = useState(false)  // sidebar open/closed on mobile
 
-  // 2. keep sidebar visible on desktop, hide/leave as-is on mobile resize
+  // modals
+  const [createModalOpen, setCreateModalOpen]   = useState(false)
+  const [profileModalOpen, setProfileModalOpen] = useState(false)
+
+  // whenever there is no activeChat, force the sidebar open
+  // on mount activeChat === null, so on mobile list is open immediately
   useEffect(() => {
-    const handleResize = () => {
-      if (window.innerWidth > 768) setShowSidebar(true)
+    if (!activeChat) {
+      setSidebarOpen(true)
     }
-    window.addEventListener('resize', handleResize)
-    return () => window.removeEventListener('resize', handleResize)
-  }, [])
-
-  // 3. toggle sidebar
-  const toggleSidebar = () => setShowSidebar(v => !v)
+  }, [activeChat])
 
   return (
-    <div className={`chat-layout ${showSidebar ? 'sidebar-open' : ''}`}>
+    <div className={`chat-layout${sidebarOpen ? ' sidebar-open' : ''}`}>
       <ChatSidebar
         activeChat={activeChat}
-        setActiveChat={chatId => {
-          setActiveChat(chatId)
-          // on mobile, auto‐close sidebar when pick a chat
-          if (window.innerWidth <= 768) setShowSidebar(false)
-        }}
+        setActiveChat={setActiveChat}
+        isOpen={sidebarOpen}
+        onClose={() => setSidebarOpen(false)}
+        onOpenCreate={() => setCreateModalOpen(true)}
+        onOpenProfile={() => setProfileModalOpen(true)}
       />
+
       <ChatMain
         activeChat={activeChat}
-        toggleSidebar={toggleSidebar}
+        toggleSidebar={() => setSidebarOpen(o => !o)}
+        openCreate={() => setCreateModalOpen(true)}
+        openProfile={() => setProfileModalOpen(true)}
+      />
+
+      <ChatCreateModal
+        isOpen={createModalOpen}
+        onClose={() => setCreateModalOpen(false)}
+      />
+
+      <UserProfileModal
+        isOpen={profileModalOpen}
+        onClose={() => setProfileModalOpen(false)}
       />
     </div>
   )

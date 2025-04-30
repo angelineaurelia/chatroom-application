@@ -1,80 +1,86 @@
 // src/components/ChatRoom/MessageList.js
 
-// 1. imports
-import React, { useEffect, useRef, useState } from 'react'
+// 1. import
+import React, {
+  useEffect,
+  useRef,
+  useState,
+  useLayoutEffect
+} from 'react'
 import {
   collection,
   query,
   orderBy,
   onSnapshot,
   doc,
+  updateDoc,
   getDoc
 } from 'firebase/firestore'
 import { useAuth } from '../../contexts/AuthContext'
 import { firestore } from '../../firebase'
-import './ChatRoom.css'
 import defaultAvatar from '../../assets/defaultAvatar.png'
+import './ChatRoom.css'
 
-// 2. create MessageList component
-export default function MessageList({ roomId }) {
+// 2. export
+export default function MessageList({ roomId, searchTerm = '' }) {
   const { currentUser } = useAuth()
-  const [messages, setMessages]   = useState([])
-  const [profiles, setProfiles]   = useState({})
-  const bottomRef                 = useRef()
+  const [messages, setMessages]       = useState([])
+  const [profiles, setProfiles]       = useState({})
+  const [highlightedId, setHighlightedId] = useState(null)
+  const bottomRef = useRef()
+  const msgRefs   = useRef({})
 
-  // 3. subscribe to messages
+  // 3. subscribe to all messages in chronological order
   useEffect(() => {
-    if (!roomId) return
-    const messagesRef = collection(
-      firestore,
-      'chatrooms',
-      roomId,
-      'messages'
-    )
-    const q = query(messagesRef, orderBy('createdAt', 'asc'))
-
-    const unsubscribe = onSnapshot(q, snap => {
-      const msgs = snap.docs.map(doc => {
-        const d = doc.data()
+    if (!roomId) {
+      setMessages([])
+      return
+    }
+    const msgsRef = collection(firestore, 'chatrooms', roomId, 'messages')
+    const q = query(msgsRef, orderBy('createdAt', 'asc'))
+    const unsub = onSnapshot(q, snap => {
+      const msgs = snap.docs.map(d => {
+        const data = d.data()
         return {
-          id: doc.id,
-          text: d.text,
-          authorId: d.authorId,
-          createdAt: d.createdAt?.toDate() || new Date()
+          id:        d.id,
+          text:      data.text,
+          authorId:  data.authorId,
+          createdAt: data.createdAt?.toDate() || new Date(),
+          isDeleted: data.isDeleted || false
         }
       })
       setMessages(msgs)
-      // 4. scroll to bottom
-      bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
     })
-
-    return unsubscribe
+    return () => unsub()
   }, [roomId])
 
-  // 5. fetch profiles for any new authorIds
+  // 4. always scroll to bottom when messages change
+  useLayoutEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: 'auto', block: 'end' })
+  }, [messages])
+
+  // 5. lazy‐load profile info for each author
   useEffect(() => {
     const uids = Array.from(new Set(messages.map(m => m.authorId)))
     uids.forEach(uid => {
-      if (profiles[uid]) return // already have it
+      if (profiles[uid]) return
       if (uid === currentUser.uid) {
-        // use currentUser data
         setProfiles(p => ({
           ...p,
           [uid]: {
-            name: currentUser.displayName || currentUser.email.split('@')[0],
-            photoURL: currentUser.photoURL || defaultAvatar
+            name:     currentUser.displayName || currentUser.email.split('@')[0],
+            photoURL: currentUser.photoURL    || defaultAvatar
           }
         }))
       } else {
-        // 6. fetch from Firestore
         getDoc(doc(firestore, 'users', uid)).then(snap => {
           if (snap.exists()) {
-            const d = snap.data()
+            const u = snap.data()
             setProfiles(p => ({
               ...p,
               [uid]: {
-                name: d.name || d.email.split('@')[0],
-                photoURL: d.photoURL || defaultAvatar
+                name:     u.name     || u.email.split('@')[0],
+                photoURL: u.photoURL || defaultAvatar
               }
             }))
           } else {
@@ -88,31 +94,71 @@ export default function MessageList({ roomId }) {
     })
   }, [messages, currentUser, profiles])
 
-  // 7. helpers for date labels
+  // 6. if a search term is given, find the first matching msg & scroll/highlight
+  useEffect(() => {
+    if (!searchTerm) {
+      setHighlightedId(null)
+      return
+    }
+    const lower = searchTerm.toLowerCase()
+    const match = messages.find(
+      m => !m.isDeleted && m.text.toLowerCase().includes(lower)
+    )
+    if (match) {
+      setHighlightedId(match.id)
+      const el = msgRefs.current[match.id]
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      }
+    } else {
+      setHighlightedId(null)
+    }
+  }, [searchTerm, messages])
+
+  // 7. helper: mark matching substrings in a react-friendly way
+  function renderHighlighted(text) {
+    if (!searchTerm) return text
+    // escape regex chars
+    const esc = searchTerm.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&')
+    const regex = new RegExp(`(${esc})`, 'gi')
+    const parts = text.split(regex)
+    return parts.map((part, i) =>
+      regex.test(part)
+        ? <mark key={i}>{part}</mark>
+        : part
+    )
+  }
+
+  // 8. unsend = mark the message as deleted in Firestore
+  async function handleUnsend(messageId) {
+    try {
+      const refMsg = doc(firestore, 'chatrooms', roomId, 'messages', messageId)
+      await updateDoc(refMsg, { isDeleted: true })
+    } catch (err) {
+      console.error('Unsend failed', err)
+    }
+  }
+
+  // 9. date separator logic
   function getDateLabel(date) {
     const today = new Date()
     const dDate = new Date(date.getFullYear(), date.getMonth(), date.getDate())
     const dToday = new Date(today.getFullYear(), today.getMonth(), today.getDate())
-    const diffMs = dToday - dDate
-    const diffDays = diffMs / (1000 * 60 * 60 * 24)
-
+    const diffDays = (dToday - dDate) / (1000 * 60 * 60 * 24)
     if (diffDays === 0) return 'Today'
     if (diffDays === 1) return 'Yesterday'
     if (diffDays < 7) {
       return date.toLocaleDateString(undefined, { weekday: 'short' })
     }
-    // dd/mm/yy
     const dd = String(date.getDate()).padStart(2, '0')
     const mm = String(date.getMonth() + 1).padStart(2, '0')
     const yy = String(date.getFullYear()).slice(-2)
     return `${dd}/${mm}/${yy}`
   }
+  const formatTime = date =>
+    date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
 
-  function formatTime(date) {
-    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-  }
-
-  // 8. build a mixed array of separators + message items
+  // 10. interleave date separators + messages
   const items = []
   let lastLabel = null
   messages.forEach(msg => {
@@ -124,6 +170,7 @@ export default function MessageList({ roomId }) {
     items.push({ type: 'message', key: msg.id, msg })
   })
 
+  // 11. finally, render everything
   return (
     <div className="message-list">
       {items.map(item => {
@@ -136,18 +183,19 @@ export default function MessageList({ roomId }) {
         }
 
         const { msg } = item
-        const isSelf = msg.authorId === currentUser.uid
+        const isSelf  = msg.authorId === currentUser.uid
         const profile = profiles[msg.authorId] || {
-          name: '',
+          name:     '',
           photoURL: defaultAvatar
         }
+        const isHighlight = msg.id === highlightedId
 
         return (
           <div
             key={msg.id}
+            ref={el => (msgRefs.current[msg.id] = el)}
             className={`message-row ${isSelf ? 'self' : 'other'}`}
           >
-            {/* avatar for others */}
             {!isSelf && (
               <img
                 src={profile.photoURL}
@@ -157,15 +205,37 @@ export default function MessageList({ roomId }) {
             )}
 
             <div
-              className={`message-block ${isSelf ? 'self' : 'other'}`}
+              className={
+                `message-block ${isSelf ? 'self' : 'other'}`
+                + (isHighlight ? ' highlight' : '')
+              }
             >
-              <div className="message-text">{msg.text}</div>
-              <div className="message-meta">
-                {formatTime(msg.createdAt)} • {profile.name}
-              </div>
+              {msg.isDeleted ? (
+                <div className="message-text deleted">
+                  <em>{profile.name} unsent a message</em>
+                </div>
+              ) : (
+                <>
+                  <div className="message-text">
+                    {renderHighlighted(msg.text)}
+                  </div>
+                  <div className="message-meta">
+                    {formatTime(msg.createdAt)} • {profile.name}
+                  </div>
+                </>
+              )}
+
+              {isSelf && !msg.isDeleted && (
+                <button
+                  className="unsend-btn"
+                  onClick={() => handleUnsend(msg.id)}
+                  title="Unsend"
+                >
+                  🗑️
+                </button>
+              )}
             </div>
 
-            {/* spacer for alignment */}
             {isSelf && <div className="message-avatar-spacer" />}
           </div>
         )
