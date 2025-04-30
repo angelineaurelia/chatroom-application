@@ -2,11 +2,13 @@
 
 // 1. import
 import React, { useState, useEffect } from 'react'
-import { doc, onSnapshot, getDoc } from 'firebase/firestore'
 import { useAuth } from '../../contexts/AuthContext'
-import { firestore } from '../../firebase'
 import MessageList from '../ChatRoom/MessageList'
 import MessageInput from '../ChatRoom/MessageInput'
+import { doc, onSnapshot, getDoc, serverTimestamp, collection, addDoc } from 'firebase/firestore'
+import { ref, uploadBytes, getDownloadURL }             from 'firebase/storage'
+import { firestore, storage }                           from '../../firebase'
+import AttachModal                                      from './AttachModal'
 import './ChatLayout.css'
 
 // 2. export
@@ -16,6 +18,7 @@ export default function ChatMain({ activeChat, toggleSidebar }) {
   const [membersData, setMembersData]   = useState([])
   const [showSearch, setShowSearch]     = useState(false)
   const [searchTerm, setSearchTerm]     = useState('')
+  const [showAttach, setShowAttach] = useState(false)
 
   // 3. load chatroom data
   useEffect(() => {
@@ -142,11 +145,23 @@ export default function ChatMain({ activeChat, toggleSidebar }) {
 
       {/* input */}
       <footer className="chat-input">
-        <button className="chat-input-plus" aria-label="More actions">
+        <button
+          className="chat-input-plus"
+          aria-label="Attach media"
+          onClick={() => setShowAttach(true)}
+        >
           ＋
         </button>
         <MessageInput roomId={activeChat} />
       </footer>
+
+      {showAttach && (
+        <AttachModal
+          roomId={activeChat}
+          onClose={() => setShowAttach(false)}
+          author={currentUser}
+        />
+      )}
     </main>
   )
 }

@@ -324,6 +324,7 @@ CHAT MAIN
 }
 
 .message-block.highlight {
+  padding: 0.75rem 1rem;
   animation: highlightPulse 1.5s ease-out forwards;
 }
 
@@ -349,17 +350,28 @@ MESSAGE LIST
   position: relative;
   white-space: pre-wrap;
   word-break: break-word;
+  padding: 0.75rem 1rem;
+}
+
+.message-block.media-only .message-media {
+  display: block;
+  width: auto;
+  max-width: 100%;
+  border-radius: 0.5rem;
+  margin: 0;
 }
 
 .unsend-btn {
-  position: absolute;
-  top: 4px;
-  right: 4px;
   background: none;
   border: none;
   font-size: 0.9rem;
   opacity: 0;
   cursor: pointer;
+  transition: opacity 0.2s;
+  margin-right: 0.5rems;
+  top: 4px;
+  right: auto;
+  left: 4px;
 }
 
 .message-block.self:hover .unsend-btn {
@@ -511,10 +523,12 @@ MODALS
   align-items: center;
   justify-content: space-between;
 }
+
 .create-header h2 {
   margin: 0;
   font-size: 1.25rem;
 }
+
 .close-btn {
   background: none;
   border: none;
@@ -554,6 +568,7 @@ MODALS
   max-height: 120px;
   overflow-y: auto;
 }
+
 .member-pill {
   padding: 0.4rem 0.8rem;
   border-radius: 2rem;
@@ -564,6 +579,7 @@ MODALS
   font-size: 0.9rem;
   transition: background 0.2s;
 }
+
 .member-pill.selected {
   background: var(--c3);
   color: black;
@@ -778,7 +794,7 @@ MOBILE
   .chat-layout.sidebar-open .chat-main {
     display: none;
   }
-  
+
   /* ensure main always full width underneath */
   .chat-main {
     width: 100%;
@@ -833,4 +849,69 @@ MOBILE
   color: var(--c4);
   font-size: 1.1rem;
   flex-shrink: 0;
+}
+
+/* =========================================================
+ATTACHMENT MODAL
+============================================================ */
+
+.attach-modal {
+  width: 90%;
+  max-width: 360px;
+  max-height: calc(100vh - 4rem);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* tabs */
+.attach-tabs {
+  display: flex;
+  border-bottom: 1px solid #ddd;
+}
+.attach-tabs button {
+  flex: 1;
+  padding: 0.75rem;
+  background: none;
+  border: none;
+  font-weight: bold;
+  cursor: pointer;
+  color: var(--c5);
+}
+.attach-tabs button.active {
+  border-bottom: 3px solid var(--c4);
+  color: var(--c4);
+}
+
+/* body */
+.attach-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 1rem;
+  gap: 1rem;
+}
+/* file input */
+.attach-body input[type="file"] {
+  border: 1px dashed #ccc;
+  padding: 1rem;
+  border-radius: 0.5rem;
+  cursor: pointer;
+}
+
+/* placeholder for GIF tab (implement later)*/
+.attach-placeholder {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #666;
+  font-style: italic;
+}
+
+/* size and rounding for media attachments */
+.message-media {
+  max-width: 60%;
+  border-radius: 0.5rem;
+  margin-bottom: 0.25rem;
 }

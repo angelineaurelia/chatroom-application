@@ -24,13 +24,13 @@ import './ChatRoom.css'
 // 2. export
 export default function MessageList({ roomId, searchTerm = '' }) {
   const { currentUser } = useAuth()
-  const [messages, setMessages]       = useState([])
-  const [profiles, setProfiles]       = useState({})
-  const [highlightedId, setHighlightedId] = useState(null)
+  const [messages, setMessages]             = useState([])
+  const [profiles, setProfiles]             = useState({})
+  const [highlightedId, setHighlightedId]   = useState(null)
   const bottomRef = useRef()
   const msgRefs   = useRef({})
 
-  // 3. subscribe to all messages in chronological order
+  // 3. subscribe to messages include mediaURL/mediaType
   useEffect(() => {
     if (!roomId) {
       setMessages([])
@@ -42,11 +42,13 @@ export default function MessageList({ roomId, searchTerm = '' }) {
       const msgs = snap.docs.map(d => {
         const data = d.data()
         return {
-          id:        d.id,
-          text:      data.text,
-          authorId:  data.authorId,
-          createdAt: data.createdAt?.toDate() || new Date(),
-          isDeleted: data.isDeleted || false
+          id:         d.id,
+          text:       data.text || '',
+          mediaURL:   data.mediaURL || null,
+          mediaType:  data.mediaType || null,  // 'image' or 'video'
+          authorId:   data.authorId,
+          createdAt:  data.createdAt?.toDate() || new Date(),
+          isDeleted:  data.isDeleted || false
         }
       })
       setMessages(msgs)
@@ -54,12 +56,12 @@ export default function MessageList({ roomId, searchTerm = '' }) {
     return () => unsub()
   }, [roomId])
 
-  // 4. always scroll to bottom when messages change
+  // 4. scroll to bottom on new messages
   useLayoutEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'auto', block: 'end' })
   }, [messages])
 
-  // 5. lazy‐load profile info for each author
+  // 5. lazy-load profile info
   useEffect(() => {
     const uids = Array.from(new Set(messages.map(m => m.authorId)))
     uids.forEach(uid => {
@@ -94,7 +96,7 @@ export default function MessageList({ roomId, searchTerm = '' }) {
     })
   }, [messages, currentUser, profiles])
 
-  // 6. if a search term is given, find the first matching msg & scroll/highlight
+  // 6. search highlight
   useEffect(() => {
     if (!searchTerm) {
       setHighlightedId(null)
@@ -107,29 +109,23 @@ export default function MessageList({ roomId, searchTerm = '' }) {
     if (match) {
       setHighlightedId(match.id)
       const el = msgRefs.current[match.id]
-      if (el) {
-        el.scrollIntoView({ behavior: 'smooth', block: 'center' })
-      }
+      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' })
     } else {
       setHighlightedId(null)
     }
   }, [searchTerm, messages])
 
-  // 7. helper: mark matching substrings in a react-friendly way
+  // 7. renderHighlighted helper
   function renderHighlighted(text) {
     if (!searchTerm) return text
-    // escape regex chars
-    const esc = searchTerm.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&')
+    const esc   = searchTerm.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&')
     const regex = new RegExp(`(${esc})`, 'gi')
-    const parts = text.split(regex)
-    return parts.map((part, i) =>
-      regex.test(part)
-        ? <mark key={i}>{part}</mark>
-        : part
+    return text.split(regex).map((part,i) =>
+      regex.test(part) ? <mark key={i}>{part}</mark> : part
     )
   }
 
-  // 8. unsend = mark the message as deleted in Firestore
+  // 8. unsend
   async function handleUnsend(messageId) {
     try {
       const refMsg = doc(firestore, 'chatrooms', roomId, 'messages', messageId)
@@ -158,7 +154,7 @@ export default function MessageList({ roomId, searchTerm = '' }) {
   const formatTime = date =>
     date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
 
-  // 10. interleave date separators + messages
+  // 10. build items array with separators
   const items = []
   let lastLabel = null
   messages.forEach(msg => {
@@ -170,7 +166,7 @@ export default function MessageList({ roomId, searchTerm = '' }) {
     items.push({ type: 'message', key: msg.id, msg })
   })
 
-  // 11. finally, render everything
+  // 11. render
   return (
     <div className="message-list">
       {items.map(item => {
@@ -206,21 +202,36 @@ export default function MessageList({ roomId, searchTerm = '' }) {
 
             <div
               className={
-                `message-block ${isSelf ? 'self' : 'other'}`
-                + (isHighlight ? ' highlight' : '')
+                `message-block ${isSelf ? 'self' : 'other'}` +
+                (msg.mediaURL && !msg.text ? ' media-only' : '') +
+                (isHighlight ? ' highlight' : '')
               }
             >
               {msg.isDeleted ? (
                 <div className="message-text deleted">
                   <em>{profile.name} unsent a message</em>
                 </div>
+              ) : msg.mediaURL ? (
+                msg.mediaType === 'video' ? (
+                  <video
+                    src={msg.mediaURL}
+                    controls
+                    className="message-media"
+                  />
+                ) : (
+                  <img
+                    src={msg.mediaURL}
+                    alt="attachment"
+                    className="message-media"
+                  />
+                )
               ) : (
                 <>
                   <div className="message-text">
                     {renderHighlighted(msg.text)}
                   </div>
                   <div className="message-meta">
-                    {formatTime(msg.createdAt)} • {profile.name}
+                    {formatTime(msg.createdAt)} • {profile.name}
                   </div>
                 </>
               )}
