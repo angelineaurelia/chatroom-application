@@ -1,6 +1,6 @@
 // src/components/ChatLayout/ChatSidebar.js
 
-// 1. import
+// 1. imports
 import React, { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
@@ -18,6 +18,7 @@ import { firestore } from '../../firebase'
 import defaultAvatar from '../../assets/defaultAvatar.png'
 import './ChatLayout.css'
 
+// 2. export ChatSidebar component
 export default function ChatSidebar({
   activeChat,
   setActiveChat,
@@ -33,7 +34,7 @@ export default function ChatSidebar({
   const [searchTerm, setSearchTerm]     = useState('')
   const [lastMessages, setLastMessages] = useState({})
 
-  // 4. load all rooms you belong to
+  // 3. load all rooms the user belongs to
   useEffect(() => {
     if (!currentUser) return
     const roomsRef = collection(firestore, 'chatrooms')
@@ -47,7 +48,7 @@ export default function ChatSidebar({
     })
   }, [currentUser])
 
-  // 5. for each room, listen to its latest message
+  // 4. for each room, listen to its latest message
   useEffect(() => {
     const unsubscribes = []
     chatrooms.forEach(room => {
@@ -79,12 +80,20 @@ export default function ChatSidebar({
               authorName = u.name || u.email.split('@')[0]
             }
           } catch {
-            // ignore
+            authorName = ''
           }
 
+          // capture text + media fields
           setLastMessages(prev => ({
             ...prev,
-            [room.id]: { text: data.text, at, isDeleted, authorName }
+            [room.id]: {
+              text:      data.text || '',
+              mediaURL:  data.mediaURL || null,
+              mediaType: data.mediaType || null,
+              at,
+              isDeleted,
+              authorName
+            }
           }))
         }
       })
@@ -99,12 +108,12 @@ export default function ChatSidebar({
       ? date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
       : ''
 
-  // filter by name
+  // filter rooms by name
   const filtered = chatrooms.filter(r =>
     r.name.toLowerCase().includes(searchTerm.toLowerCase())
   )
 
-  // logout
+  // logout handler
   const handleLogout = async () => {
     await logout()
     navigate('/login', { replace: true })
@@ -112,7 +121,7 @@ export default function ChatSidebar({
 
   return (
     <aside className={`sidebar${isOpen ? ' open' : ''}`}>
-      {/* profile */}
+      {/* profile section */}
       <div className="sidebar-profile">
         <img
           src={currentUser.photoURL || defaultAvatar}
@@ -147,7 +156,7 @@ export default function ChatSidebar({
         </div>
       </div>
 
-      {/* search */}
+      {/* search chatrooms */}
       <input
         type="text"
         className="sidebar-search"
@@ -156,12 +165,25 @@ export default function ChatSidebar({
         onChange={e => setSearchTerm(e.target.value)}
       />
 
-      {/* room list */}
+      {/* chatroom list */}
       <ul className="chatroom-list">
         {filtered.length > 0 ? (
           filtered.map(room => {
             const last = lastMessages[room.id] || {}
             const isActive = room.id === activeChat
+
+            // determine preview text:
+            let previewText = ''
+            if (last.isDeleted) {
+              previewText = `${last.authorName} unsent a message`
+            } else if (last.mediaURL) {
+              previewText = `${last.authorName} sent an attachment`
+            } else if (last.text) {
+              previewText =
+                last.text.length > 30
+                  ? last.text.slice(0, 30) + '…'
+                  : last.text
+            }
 
             return (
               <li
@@ -173,15 +195,10 @@ export default function ChatSidebar({
                 }}
               >
                 <div className="room-heading">{room.name}</div>
-
                 {last.at && (
                   <div className="room-subheading">
                     <span className="room-last-text">
-                      {last.isDeleted
-                        ? `${last.authorName} unsent a message`
-                        : last.text.length > 30
-                        ? last.text.slice(0, 30) + '…'
-                        : last.text}
+                      {previewText}
                     </span>
                     <span className="room-last-time">
                       {fmtTime(last.at)}
@@ -196,7 +213,7 @@ export default function ChatSidebar({
         )}
       </ul>
 
-      {/* new Chat */}
+      {/* “New Message” button */}
       <button
         type="button"
         className="new-message-btn"
