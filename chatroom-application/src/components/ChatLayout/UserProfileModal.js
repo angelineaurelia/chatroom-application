@@ -11,6 +11,7 @@ import { firestore, storage, auth } from '../../firebase'
 import './ChatLayout.css'
 import defaultAvatar from '../../assets/defaultAvatar.png'
 
+// 2. export UserProfileModal component
 export default function UserProfileModal({ isOpen, onClose }) {
   const { currentUser } = useAuth()
 
@@ -25,7 +26,7 @@ export default function UserProfileModal({ isOpen, onClose }) {
   const [error, setError]               = useState('')
   const [editingField, setEditingField] = useState(null)
 
-  // original values for dirty-checking
+  // original values for dirty‐checking
   const [origPhotoURL, setOrigPhotoURL] = useState('')
   const [origName, setOrigName]         = useState('')
   const [origEmail, setOrigEmail]       = useState('')
@@ -39,7 +40,7 @@ export default function UserProfileModal({ isOpen, onClose }) {
     setNewPicFile(null)
     setEditingField(null)
 
-    // 2. auth fields
+    // 3. auth fields
     const photoURL = currentUser.photoURL || defaultAvatar
     const dispName = currentUser.displayName || ''
     const mail     = currentUser.email || ''
@@ -48,12 +49,11 @@ export default function UserProfileModal({ isOpen, onClose }) {
     setName(dispName)
     setEmail(mail)
 
-    // set originals
     setOrigPhotoURL(photoURL)
     setOrigName(dispName)
     setOrigEmail(mail)
 
-    // 3. firestore extras
+    // 4. firestore extras
     ;(async () => {
       try {
         const snap = await getDoc(doc(firestore, 'users', currentUser.uid))
@@ -77,18 +77,31 @@ export default function UserProfileModal({ isOpen, onClose }) {
     })()
   }, [isOpen, currentUser])
 
-  // determine if anything changed
+  // dirty‐check
   const isDirty =
     !!newPicFile ||
-    name.trim()    !== origName     ||
-    email.trim()   !== origEmail    ||
-    phone.trim()   !== origPhone    ||
+    name.trim()    !== origName   ||
+    email.trim()   !== origEmail  ||
+    phone.trim()   !== origPhone  ||
     address.trim() !== origAddress
 
-  // save handler submits form
+  // save handler
   async function handleSave(e) {
     e.preventDefault()
     if (!isDirty) return
+
+    // client-side validation
+    const phoneTrim = phone.trim()
+    if (phoneTrim && !/^\+?[0-9]{7,15}$/.test(phoneTrim)) {
+      setError('Please enter a valid phone number (7-15 digits, optional +).')
+      return
+    }
+    const addressTrim = address.trim()
+    if (addressTrim && addressTrim.length < 5) {
+      setError('Please enter a valid address (at least 5 characters).')
+      return
+    }
+
     setSaving(true)
     setError('')
 
@@ -123,8 +136,8 @@ export default function UserProfileModal({ isOpen, onClose }) {
       await updateDoc(doc(firestore, 'users', currentUser.uid), {
         name:     name.trim(),
         email:    email.trim(),
-        phone:    phone.trim(),
-        address:  address.trim(),
+        phone:    phoneTrim,
+        address:  addressTrim,
         photoURL: updatedPicURL
       })
 
@@ -144,11 +157,18 @@ export default function UserProfileModal({ isOpen, onClose }) {
 
   if (!isOpen) return null
 
+  // field definitions, with phone validation attributes
   const fields = [
     { key: 'name',    label: 'Name',    value: name,    setter: setName,    type: 'text'  },
     { key: 'email',   label: 'Email',   value: email,   setter: setEmail,   type: 'email' },
-    { key: 'phone',   label: 'Phone',   value: phone,   setter: setPhone,   type: 'text'  },
-    { key: 'address', label: 'Address', value: address, setter: setAddress, type: 'text'  }
+    {
+      key:    'phone',
+      label:  'Phone',
+      value:  phone,
+      setter: setPhone,
+      type:   'text',
+    },
+    { key: 'address', label: 'Address', value: address, setter: setAddress, type: 'text' }
   ]
 
   return createPortal(
@@ -157,6 +177,7 @@ export default function UserProfileModal({ isOpen, onClose }) {
         className="modal-card"
         onClick={e => e.stopPropagation()}
         onSubmit={handleSave}
+        noValidate
       >
         <header className="profile-header">
           <button type="button" className="back-btn" onClick={onClose}>
@@ -204,11 +225,14 @@ export default function UserProfileModal({ isOpen, onClose }) {
                   <input
                     className="inline-input"
                     type={f.type}
+                    pattern={f.pattern}
+                    title={f.title}
                     value={f.value}
                     onChange={e => f.setter(e.target.value)}
                     onBlur={() => setEditingField(null)}
                     autoFocus
                     disabled={saving}
+                    required={f.key === 'phone'}
                   />
                 ) : (
                   f.value || <em>Not set</em>

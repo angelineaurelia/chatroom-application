@@ -1,6 +1,6 @@
 {
   "short_name": "wapp chattr",
-  "name": "Create React App Sample",
+  "name": "Chat with your friends!",
   "icons": [
     {
       "src": "favicon.ico",

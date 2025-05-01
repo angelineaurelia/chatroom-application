@@ -1,70 +1,136 @@
-# Getting Started with Create React App
+# Software Studio 2025 Spring
+## Midterm Project Chatroom
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+### Scoring
 
-## Available Scripts
+| **Basic components**    | **Score** | **Check** |
+|:----------------------- |:---------:|:---------:|
+| Membership Mechanism    |    5%     |     Y     |
+| Host your Firebase page |    5%     |     Y     |
+| Database read/write     |    15%    |     Y     |
+| RWD                     |    55%    |     Y     |
+| Git                     |    5%     |     Y     |
+| Chatroom                |    20%    |     Y     |
 
-In the project directory, you can run:
+| **Advanced components**                              | **Score** | **Check** |
+|:---------------------------------------------------- |:---------:|:---------:|
+| Using React                                          |    10%    |     Y     |
+| Sign Up/In with Google or other third-party accounts |    5%     |     Y     |
+| Use CSS animation                                    |    2%     |     Y     |
+| Deal with problems when sending code                 |    2%     |     Y     |
 
-### `npm start`
+| **Bonus Components**    | **Score** | **Check** |
+|:----------------------- |:---------:|:---------:|
+| User profile            |    1%     |     Y     |
+| Profile picture         |    1%     |     Y     |
+| Send image              |    1%     |     Y     |
+| Send Video              |    1%     |     Y     |
+| Chatbot                 |    2%     |     N     |
+| Block User              |    2%     |     N     |
+| Unsend message          |    3%     |     Y     |
+| Search for message      |    3%     |     Y     |
+| Send gif from Tenor API |    3%     |     Y     |
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+---
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+### How to use 
 
-### `npm test`
+#### 1. Prerequisites
+- [Node.js](https://nodejs.org/) v14 or higher  
+- [npm](https://www.npmjs.com/) (comes with Node)  
+- A Firebase project (we use Authentication, Firestore & Storage)  
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+#### 2. Clone & Install
 
-### `npm run build`
+If using github: 
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+```bash
+git clone https://github.com/angelineaurelia/chatroom-application
+cd chatroom-application
+npm install
+```
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+#### 3. Firebase configuration
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+1. Create a file called `.env.local` in the project root (this is git-ignored) and paste in the Firebase config like so:
 
-### `npm run eject`
+    ```text
+    REACT_APP_FIREBASE_API_KEY=AIzaSyCm3LWss5eIDZP7kR82U7_PhmGobc1pdus
+    REACT_APP_FIREBASE_AUTH_DOMAIN=wapp-chattr.firebaseapp.com
+    REACT_APP_FIREBASE_DATABASE_URL=https://wapp-chattr-default-rtdb.firebaseio.com
+    REACT_APP_FIREBASE_PROJECT_ID=wapp-chattr
+    REACT_APP_FIREBASE_STORAGE_BUCKET=wapp-chattr.firebasestorage.app
+    REACT_APP_FIREBASE_MESSAGING_SENDER_ID=795474319184
+    REACT_APP_FIREBASE_APP_ID=1:795474319184:web:21f9386557aa0768613e55
+    REACT_APP_FIREBASE_MEASUREMENT_ID=G-M7JG95Y4CW
+    REACT_APP_TENOR_KEY= AIzaSyDnHz8vlaIt7rJvHymEqupbdDmhVwXT3c0 
+    ```
+    
+2. Ensure your **Firestore**, **Storage** and **Hosting** rules are in place:
+    
+    ```bash
+    # to test locally
+    firebase emulators:start
+    ```
+    
+#### 4. Run locally
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
+```bash
+npm start
+```
 
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+- App will open at `http://localhost:3000` by default
+- Sign up / log in and you’re good to go!
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
+### Function description
+- **Email/password & Google sign-in**
+- **Responsive design**: works seamlessly on desktop and mobile screens
+- **Private group chatrooms**: name your room, invite any number of registered users
+- **Message history**: load all history message of current chatroom with date separators
+- **Browser notifications** for incoming messages when the tab isn’t focused (make sure to allow notification)
+- **CSS animations**: animations for when searching text highlight, opening modal, and text bubble.
 
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
+- **User profiles**: editable profile picture, name, email, phone & address
+- **Media support**: send images, videos or GIFs (via Tenor API)
+- **Unsend messages**: authors can delete their own messages
+- **Search messages**: click the 🔍 icon in the chat header, type to jump & highlight
+- **Search chatrooms**: filter by room name in real time
 
-## Learn More
+### How to use
+1. **Sign up** or **log in** (email/password or Google).
+2. Once inside, you’ll see your **chatroom list** on the left.
+3. Click **“New Message +”** to create a room:
+    - Give it a name
+    - Select one or more users to invite (you’re added automatically)
+    - If no other users are invited, it will be a private room just for you
+4. Select a room to open its **message view**.
+    - Type a message and hit **Send**
+    - Or click the **＋** to **attach** an image/video or pick a GIF
+    - Click the “Unsend” button to delete previously deleted message
+5. Click your **profile avatar** (top-left) to edit your own profile.
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+### Operating the App
+**Navigation**
+- **Sidebar** (desktop) or **drawer** (mobile): shows your rooms + search bar
+- **Chat area**: header shows room name + members; messages flow below; input at bottom
+- **Profile & Logout** buttons are at the top of the sidebar
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+**Mobile view**
+Mobile view for this app is supported
+- After logging in, user is able to create a new chatroom or open existing chatroom
+- Open existing one by clicking on the desired chatroom in the list
+- The rest should work similarly
 
-### Code Splitting
+### Web page link
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
+    https://wapp-chattr.web.app
 
-### Analyzing the Bundle Size
+### Others
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
+Check demo.mp4 for a quick preview of the app
 
-### Making a Progressive Web App
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
-
-### Advanced Configuration
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
-
-### Deployment
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
-
-### `npm run build` fails to minify
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+<style>
+table th{
+    width: 100%;
+}
+</style>
