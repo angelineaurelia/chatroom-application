@@ -63,7 +63,7 @@ npm install
     REACT_APP_FIREBASE_MESSAGING_SENDER_ID=795474319184
     REACT_APP_FIREBASE_APP_ID=1:795474319184:web:21f9386557aa0768613e55
     REACT_APP_FIREBASE_MEASUREMENT_ID=G-M7JG95Y4CW
-    REACT_APP_TENOR_KEY= AIzaSyDnHz8vlaIt7rJvHymEqupbdDmhVwXT3c0 
+    REACT_APP_TENOR_KEY= AIzaSyDnHz8vlaIt7rJvHymEqupbdDmhVwXT3c0
     ```
     
 2. Ensure your **Firestore**, **Storage** and **Hosting** rules are in place:
@@ -125,9 +125,15 @@ Mobile view for this app is supported
 
     https://wapp-chattr.web.app
 
+### Github Link
+
+    https://github.com/angelineaurelia/chatroom-application
+
 ### Others
 
-Check demo.mp4 for a quick preview of the app
+Check demo.mov for a quick preview of the app. 
+Demo using Macbook Apple Sillicon
+Browser: Arc (Chromium-based)
 
 <style>
 table th{

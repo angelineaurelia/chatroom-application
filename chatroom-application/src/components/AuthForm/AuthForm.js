@@ -33,14 +33,27 @@ export default function AuthForm() {
     setLoading(false)
   }
 
+  // request notification permission
+  if ('Notification' in window) {
+    Notification.requestPermission().then(permission => {
+      console.log('Notification permission after login:', permission)
+    })
+  }
+  
   // 4. handle Google sign-in
   async function handleGoogleSignIn() {
     setError(''); setLoading(true)
     try {
       await signInWithGoogle()
+      // request notification permission
+      if ('Notification' in window) {
+        Notification.requestPermission().then(permission => {
+          console.log('Notification permission after login:', permission)
+        })
+      }
       navigate('/chatrooms')
     } catch {
-      setError('Google sign‑in failed')
+      setError('Google sign-in failed')
     }
     setLoading(false)
   }
