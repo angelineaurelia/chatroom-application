@@ -55,15 +55,7 @@ npm install
 1. Create a file called `.env.local` in the project root (this is git-ignored) and paste in the Firebase config like so:
 
     ```text
-    REACT_APP_FIREBASE_API_KEY=AIzaSyCm3LWss5eIDZP7kR82U7_PhmGobc1pdus
-    REACT_APP_FIREBASE_AUTH_DOMAIN=wapp-chattr.firebaseapp.com
-    REACT_APP_FIREBASE_DATABASE_URL=https://wapp-chattr-default-rtdb.firebaseio.com
-    REACT_APP_FIREBASE_PROJECT_ID=wapp-chattr
-    REACT_APP_FIREBASE_STORAGE_BUCKET=wapp-chattr.firebasestorage.app
-    REACT_APP_FIREBASE_MESSAGING_SENDER_ID=795474319184
-    REACT_APP_FIREBASE_APP_ID=1:795474319184:web:21f9386557aa0768613e55
-    REACT_APP_FIREBASE_MEASUREMENT_ID=G-M7JG95Y4CW
-    REACT_APP_TENOR_KEY= AIzaSyDnHz8vlaIt7rJvHymEqupbdDmhVwXT3c0
+    Check the README.md from FileZilla to prevent google API in public repo!
     ```
     
 2. Ensure your **Firestore**, **Storage** and **Hosting** rules are in place:
